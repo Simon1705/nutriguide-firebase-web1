@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "git config --global --add safe.directory '*' && curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz | tar -xJ && export PATH=\"$PATH:`pwd`/flutter/bin\" && flutter precache && flutter build web",
+  "buildCommand": "chmod +x ./build.sh && ./build.sh",
   "outputDirectory": "build/web",
   "routes": [
     {

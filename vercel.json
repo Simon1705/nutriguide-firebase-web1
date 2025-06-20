@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.9-stable.tar.xz | tar -xJ && export PATH=\"$PATH:`pwd`/flutter/bin\" && flutter precache && flutter build web",
+  "outputDirectory": "build/web",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+} 

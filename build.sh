@@ -3,6 +3,9 @@
 # Exit script on any error
 set -e
 
+# Copy the example env file to .env to make it available for the build
+cp .env.example .env
+
 # Fix for git "dubious ownership" error
 git config --global --add safe.directory '*'
 

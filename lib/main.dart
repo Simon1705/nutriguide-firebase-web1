@@ -10,6 +10,7 @@ import 'landing_page.dart';
 import 'home_page.dart';
 import 'services/assistant_services.dart';
 import 'services/timezone_service.dart';
+import 'widgets/maintenance_wrapper.dart';
 
 
 // Handle background messages
@@ -60,19 +61,21 @@ class MealPlannerApp extends StatelessWidget {
             visualDensity: VisualDensity.adaptivePlatformDensity,
             fontFamily: 'Roboto',
           ),
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          home: MaintenanceWrapper(
+            child: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (snapshot.hasData && snapshot.data != null) {
-                return const HomePage();
-              }
+                if (snapshot.hasData && snapshot.data != null) {
+                  return const HomePage();
+                }
 
-              return const LandingPage();
-            },
+                return const LandingPage();
+              },
+            ),
           ),
         );
       },

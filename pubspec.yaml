@@ -84,6 +84,7 @@ dev_dependencies:
 flutter:
   assets:
     - .env
+    - assets/images/
     - assets/images/landing_page.jpg
     - assets/images/register_page.jpg
     - assets/images/regist_page.jpg
@@ -96,6 +97,8 @@ flutter:
     - assets/images/no-activity.png
     - assets/images/logo_NutriGuide.png
     - assets/images/google_logo.png
+    - assets/images/meta_Logo.jpg
+    - assets/images/groq_logo.png
 
   fonts:
     - family: Pacifico
@@ -117,7 +120,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/to/resolution-aware-images
+  # https://flutter.dev/assets-and-images/#resolution-aware
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package

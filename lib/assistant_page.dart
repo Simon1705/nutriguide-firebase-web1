@@ -3,13 +3,15 @@ import 'dart:typed_data';
 
 import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gemini/flutter_gemini.dart';
 import '../services/firestore_service.dart';
 import 'package:dash_chat_2/dash_chat_2.dart' as dash;
 import 'core/constants/colors.dart';
 import 'core/constants/font_sizes.dart';
 import 'core/helpers/responsive_helper.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AssistantPage extends StatefulWidget {
   const AssistantPage({super.key});
@@ -19,7 +21,6 @@ class AssistantPage extends StatefulWidget {
 }
 
 class _AssistantPageState extends State<AssistantPage> with SingleTickerProviderStateMixin {
-  final Gemini gemini = Gemini.instance;
   final FirestoreService _firestoreService = FirestoreService();
   List<ChatMessage> messages = [];
   bool isLoading = true;
@@ -43,10 +44,10 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
     firstName: "User",
   );
   
-  ChatUser geminiUser = ChatUser(
+  ChatUser groqUser = ChatUser(
     id: "1",
     firstName: "Nutri Assistant",
-    profileImage: "https://seeklogo.com/images/G/google-gemini-logo-A5787B2669-seeklogo.com.png",
+    profileImage: "assets/images/meta_Logo.jpg",
   );
 
   @override
@@ -90,6 +91,7 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
         centerTitle: true,
         title: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Image.asset(
               'assets/images/logo_NutriGuide.png',
@@ -97,6 +99,9 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
               width: 30,
             ),
             const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             Text(
               "Nutri Assistant",
               style: TextStyle(
@@ -104,6 +109,31 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
                 fontWeight: FontWeight.bold,
                 fontSize: ResponsiveHelper.getAdaptiveTextSize(context, FontSizes.heading3),
               ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      'powered by ',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 172, 235, 200),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Image.asset(
+                        'assets/images/groq_logo.png',
+                        height: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
@@ -159,6 +189,7 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
         },
       ),
       inputOptions: InputOptions(
+        sendOnEnter: true,
         inputDecoration: InputDecoration(
           hintText: "Ask about nutrition, recipes, or diet...",
           hintStyle: TextStyle(color: AppColors.textSecondary),
@@ -285,7 +316,7 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
     
     return [
       ChatMessage(
-        user: geminiUser,
+        user: groqUser,
         createdAt: DateTime.now(),
         text: greeting,
       ),
@@ -306,77 +337,77 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
   }
 
   void _sendMessage(dash.ChatMessage chatMessage) async {
+    // Prevent sending empty messages
+    if (chatMessage.text.trim().isEmpty) {
+      return;
+    }
+
     setState(() {
       messages = [chatMessage, ...messages];
       isTyping = true;
     });
     
+    // --- START OF GROQ API CALL ---
     try {
-      await _firestoreService.saveChatMessage(chatMessage, true);
+      // Read API key from environment variables
+      final apiKey = dotenv.env['GROQ_API_KEY'];
 
-      String question = chatMessage.text;
-      List<Uint8List>? images;
-      if (chatMessage.medias?.isNotEmpty ?? false) {
-        images = [
-          File(chatMessage.medias!.first.url).readAsBytesSync(),
-        ];
+      if (apiKey == null || apiKey.isEmpty) {
+        throw Exception('GROQ_API_KEY is not set in the .env file');
+      }
+      
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "messages": [
+            {
+              "role": "user",
+              "content": chatMessage.text,
+            }
+          ],
+          "model": "llama3-8b-8192", // Fast and capable model
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices'][0]['message']['content'];
+        
+        final groqMessage = dash.ChatMessage(
+          user: groqUser, // You can keep the user object as is
+          createdAt: DateTime.now(),
+          text: content,
+        );
+
+        setState(() {
+          messages = [groqMessage, ...messages];
+          isTyping = false;
+        });
+
+        // Optionally save to Firestore
+        _firestoreService.saveChatMessage(chatMessage, true); // User message
+        _firestoreService.saveChatMessage(groqMessage, false); // AI response
+
+      } else {
+        throw Exception('Failed to get response from Groq: ${response.statusCode} ${response.body}');
       }
 
-      String fullResponse = ""; // Tambahkan variabel untuk menyimpan respons lengkap
-      
-      gemini.streamGenerateContent(
-        question,
-        images: images,
-      ).listen(
-        (event) {
-          dash.ChatMessage? lastMessage = messages.firstOrNull;
-          String response = event.content?.parts?.fold(
-              "", (previous, current) => "$previous ${current.text}") ?? "";
-          
-          if (lastMessage != null && lastMessage.user == geminiUser) {
-            lastMessage = messages.removeAt(0);
-            fullResponse += response; // Akumulasi respons
-            lastMessage.text = fullResponse; // Gunakan respons lengkap
-            setState(() {
-              messages = [lastMessage!, ...messages];
-            });
-          } else {
-            fullResponse = response; // Mulai respons baru
-            dash.ChatMessage message = dash.ChatMessage(
-              user: geminiUser,
-              createdAt: DateTime.now(),
-              text: response,
-            );
-            setState(() {
-              messages = [message, ...messages];
-            });
-          }
-        },
-        onDone: () {
-          setState(() {
-            isTyping = false;
-          });
-          // Simpan respons lengkap setelah streaming selesai
-          if (messages.isNotEmpty && messages.first.user == geminiUser) {
-            _firestoreService.saveChatMessage(messages.first, false);
-          }
-        },
-      );
     } catch (e) {
-      setState(() {
-        isTyping = false;
-      });
-      print('Error in sendMessage: $e');
-      
-      // Show error message in chat
+      print('Error calling Groq API: $e');
       dash.ChatMessage errorMessage = dash.ChatMessage(
-        user: geminiUser,
+        user: groqUser,
         createdAt: DateTime.now(),
-        text: "I'm sorry, I couldn't process your request. Please try again later.",
+        text: "Sorry, I couldn't connect to the AI service. Please check the error log.",
       );
       setState(() {
         messages = [errorMessage, ...messages];
+        isTyping = false;
       });
     }
+    // --- END OF GROQ API CALL ---
   }
 }

@@ -3,8 +3,7 @@
 # Configure git
 git config --global --add safe.directory '*'
 
-# Install required packages
-yum update -y && yum install -y curl git unzip xz tar
+# The Vercel environment should have the necessary tools like curl, git, tar, etc.
 
 # Download and extract Flutter
 curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.0-stable.tar.xz | tar -xJ

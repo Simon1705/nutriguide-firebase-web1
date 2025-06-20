@@ -349,11 +349,12 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
     
     // --- START OF GROQ API CALL ---
     try {
-      // Read API key from environment variables
-      final apiKey = dotenv.env['GROQ_API_KEY'];
+      // Robust way to get API key for both local dev (.env) and deployment (dart-define)
+      const apiKeyFromEnv = String.fromEnvironment('GROQ_API_KEY');
+      final apiKey = apiKeyFromEnv.isNotEmpty ? apiKeyFromEnv : dotenv.env['GROQ_API_KEY'];
 
       if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('GROQ_API_KEY is not set in the .env file');
+        throw Exception('GROQ_API_KEY is not set in .env for local development or as an environment variable for deployment.');
       }
       
       final response = await http.post(

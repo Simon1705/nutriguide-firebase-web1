@@ -11,7 +11,6 @@ import 'core/helpers/responsive_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AssistantPage extends StatefulWidget {
   const AssistantPage({super.key});
@@ -349,13 +348,8 @@ class _AssistantPageState extends State<AssistantPage> with SingleTickerProvider
     
     // --- START OF GROQ API CALL ---
     try {
-      // Robust way to get API key for both local dev (.env) and deployment (dart-define)
-      const apiKeyFromEnv = String.fromEnvironment('GROQ_API_KEY');
-      final apiKey = apiKeyFromEnv.isNotEmpty ? apiKeyFromEnv : dotenv.env['GROQ_API_KEY'];
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('GROQ_API_KEY is not set in .env for local development or as an environment variable for deployment.');
-      }
+      // API Key is now hardcoded here for simplicity
+      const apiKey = "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";
       
       final response = await http.post(
         Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
